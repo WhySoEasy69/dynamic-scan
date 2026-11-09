@@ -14,17 +14,6 @@ template <typename T>
 concept AllowedType = OneOf<std::remove_cv_t<T>, int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t,
                             uint64_t, float, double, std::string_view, std::string>;
 
-template <size_t Val, size_t... Vals>
-struct Sequence : Sequence<Val - 1, Val, Vals...> {};
-
-template <size_t... Vals>
-struct Sequence<0, Vals...> {
-    using type = Sequence<0, Vals...>;
-};
-
-template <size_t N>
-using DeduceSequenceT = typename Sequence<N>::type;
-
 }  // namespace
 
 namespace stdx {
@@ -67,11 +56,11 @@ constexpr std::expected<details::scan_result<Ts...>, details::scan_error> scan(s
         };
 
         auto makeScanResult = [... fs = details::parse_value_with_format<Ts>, input_parts, format_parts,
-                               &aggregateConversionsResults]<size_t... Ids>(Sequence<Ids...>) {
+                               &aggregateConversionsResults]<size_t... Ids>(std::index_sequence<Ids...>) {
             return aggregateConversionsResults(fs(input_parts[Ids], format_parts[Ids])...);
         };
 
-        return makeScanResult(DeduceSequenceT<valuesCount - 1>{});
+        return makeScanResult(std::make_index_sequence<valuesCount>{});
     } else {
         return std::unexpected(res.error());
     }
